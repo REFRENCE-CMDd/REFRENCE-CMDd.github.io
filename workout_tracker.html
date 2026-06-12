@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HomeLift — Home Gym Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0f0f0f; --bg2: #1a1a1a; --bg3: #242424; --bg4: #2e2e2e;
+  --border: #2e2e2e; --border2: #444;
+  --text: #f0f0f0; --text2: #999; --text3: #555;
+  --accent: #c8ff57; --accent2: #a8d93f; --accent-bg: rgba(200,255,87,0.07);
+  --push: #ff6b9d; --pull: #6bb5ff; --legs: #57e8a0;
+  --red: #ff6b6b;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+
+/* NAV */
+nav { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 16px; display: flex; align-items: center; position: sticky; top: 0; z-index: 100; }
+.logo { font-family: 'Space Grotesk', sans-serif; font-size: 17px; color: var(--accent); padding: 14px 16px 14px 0; border-right: 1px solid var(--border); margin-right: 4px; white-space: nowrap; }
+.tabs { display: flex; overflow-x: auto; flex: 1; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tab { padding: 14px 14px; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: all .2s; user-select: none; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* PAGES */
+.page { display: none; max-width: 860px; margin: 0 auto; padding: 20px 14px 80px; }
+.page.active { display: block; }
+
+/* WEEK STRIP */
+.week-strip { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; margin-bottom: 20px; }
+.day-cell { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 8px 4px; text-align: center; cursor: pointer; transition: border-color .15s; }
+.day-cell:hover { border-color: var(--border2); }
+.day-cell.active { border-color: var(--accent); background: var(--accent-bg); }
+.dc-name { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; }
+.dc-type { font-size: 11px; font-weight: 600; margin-top: 3px; }
+.dc-type.push { color: var(--push); }
+.dc-type.pull { color: var(--pull); }
+.dc-type.legs { color: var(--legs); }
+.dc-type.rest { color: var(--text3); }
+.dc-check { font-size: 12px; color: var(--accent); margin-top: 2px; }
+
+/* EXERCISE CARD */
+.ex-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+.ex-header { display: flex; align-items: center; gap: 12px; padding: 12px; cursor: pointer; }
+.ex-thumb { width: 58px; height: 58px; border-radius: 7px; object-fit: cover; background: var(--bg3); flex-shrink: 0; border: 1px solid var(--border); }
+.ex-thumb-ph { width: 58px; height: 58px; border-radius: 7px; background: var(--bg3); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+.ex-thumb-ph.loading::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%); animation: shimmer 1.2s infinite; }
+@keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+.ex-info { flex: 1; min-width: 0; }
+.ex-name { font-weight: 600; font-size: 14px; line-height: 1.3; }
+.ex-meta { font-size: 12px; color: var(--text2); margin-top: 3px; }
+.chev { color: var(--text3); font-size: 16px; transition: transform .2s; flex-shrink: 0; }
+.chev.open { transform: rotate(180deg); }
+
+/* EXPAND */
+.ex-body { display: none; border-top: 1px solid var(--border); }
+.ex-body.open { display: block; }
+.demo-section { padding: 12px; background: var(--bg3); }
+.demo-imgs { display: flex; gap: 8px; }
+.demo-img { flex: 1; border-radius: 6px; object-fit: cover; height: 140px; background: var(--bg4); border: 1px solid var(--border); }
+.demo-img-ph { flex: 1; border-radius: 6px; height: 140px; background: var(--bg4); display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 12px; border: 1px dashed var(--border2); }
+.demo-label { font-size: 11px; color: var(--text3); text-align: center; margin-top: 5px; }
+.yt-link { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--pull); text-decoration: none; margin-top: 8px; }
+.yt-link:hover { text-decoration: underline; }
+.tip-box { margin: 0 12px 0; padding: 9px 12px; background: var(--accent-bg); border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0; font-size: 12px; color: var(--text); line-height: 1.6; }
+.sets-section { padding: 10px 12px 12px; }
+.set-header { display: grid; grid-template-columns: 28px 1fr 1fr 34px; gap: 6px; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; text-align: center; }
+.set-row { display: grid; grid-template-columns: 28px 1fr 1fr 34px; gap: 6px; align-items: center; margin-bottom: 5px; }
+.set-num { font-size: 12px; color: var(--text3); text-align: center; font-weight: 500; }
+.set-input { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 7px 6px; color: var(--text); font-size: 13px; width: 100%; text-align: center; font-family: 'Inter', sans-serif; }
+.set-input:focus { outline: none; border-color: var(--accent); }
+.set-input::placeholder { color: var(--text3); }
+.tick-btn { width: 30px; height: 30px; border-radius: 6px; background: var(--bg4); border: 1px solid var(--border); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text3); transition: all .15s; }
+.tick-btn.done { background: rgba(200,255,87,0.15); border-color: var(--accent); color: var(--accent); }
+.add-set { background: none; border: 1px dashed var(--border2); border-radius: 6px; padding: 6px; width: 100%; color: var(--text3); font-size: 12px; cursor: pointer; margin-top: 4px; }
+.add-set:hover { border-color: var(--accent); color: var(--accent); }
+
+/* STATS */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px,1fr)); gap: 8px; margin-bottom: 18px; }
+.stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 10px; text-align: center; }
+.stat-val { font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700; color: var(--accent); }
+.stat-lbl { font-size: 10px; color: var(--text2); margin-top: 2px; text-transform: uppercase; letter-spacing: .5px; }
+
+/* CARDS */
+.card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+h2 { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 19px; margin-bottom: 14px; }
+h3 { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+.tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+.tag.push { background: rgba(255,107,157,.12); color: var(--push); }
+.tag.pull { background: rgba(107,181,255,.12); color: var(--pull); }
+.tag.legs { background: rgba(87,232,160,.12); color: var(--legs); }
+.phase-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-bg); border: 1px solid rgba(200,255,87,.25); border-radius: 20px; padding: 3px 10px; font-size: 11px; color: var(--accent); font-weight: 500; }
+.btn-primary { background: var(--accent); color: #111; border: none; border-radius: 7px; padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Inter', sans-serif; }
+.btn-primary:hover { background: var(--accent2); }
+.btn-ghost { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); border-radius: 7px; padding: 9px 16px; font-size: 13px; cursor: pointer; font-family: 'Inter', sans-serif; }
+.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+.tip-info { background: var(--accent-bg); border: 1px solid rgba(200,255,87,.2); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: var(--text); line-height: 1.65; margin-bottom: 14px; }
+.flex { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.mb { margin-bottom: 14px; }
+canvas { width: 100% !important; }
+select { background: var(--bg3); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 8px 10px; font-size: 13px; cursor: pointer; width: 100%; margin-bottom: 12px; font-family: 'Inter', sans-serif; }
+select:focus { outline: none; border-color: var(--accent); }
+.hist-row { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; }
+.del-btn { background: none; border: 1px solid rgba(255,107,107,.3); color: var(--red); border-radius: 5px; padding: 3px 9px; font-size: 11px; cursor: pointer; }
+.del-btn:hover { background: rgba(255,107,107,.1); }
+.empty { text-align: center; padding: 50px 20px; color: var(--text3); }
+.prog-bar-wrap { background: var(--bg3); border-radius: 4px; height: 6px; overflow: hidden; margin-top: 4px; }
+.prog-bar { height: 6px; border-radius: 4px; background: var(--accent); transition: width .4s; }
+@media(max-width:560px){ .week-strip{grid-template-columns:repeat(4,1fr)} .stat-grid{grid-template-columns:repeat(2,1fr)} }
+
+/* PHASE COMPARE */
+.phase-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 10px; }
+.phase-col { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+.phase-col.current { border-color: rgba(200,255,87,.4); background: var(--accent-bg); }
+.phase-col-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+.phase-col.current .phase-col-title { color: var(--accent); }
+.phase-col:not(.current) .phase-col-title { color: var(--text3); }
+.phase-ex { font-size: 11px; color: var(--text2); margin: 3px 0; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">🏋 HomeLift</div>
+  <div class="tabs">
+    <div class="tab active" onclick="showPage('today',this)">Today</div>
+    <div class="tab" onclick="showPage('program',this)">Program</div>
+    <div class="tab" onclick="showPage('progress',this)">Progress</div>
+    <div class="tab" onclick="showPage('history',this)">History</div>
+    <div class="tab" onclick="showPage('equipment',this)">Gear</div>
+  </div>
+</nav>
+
+<div id="page-today" class="page active"></div>
+<div id="page-program" class="page"></div>
+<div id="page-progress" class="page"></div>
+<div id="page-history" class="page"></div>
+<div id="page-equipment" class="page"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const IMG_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const SCHEDULE = ['rest','push','pull','legs','push','pull','legs'];
+const SCHED_LABELS = ['Rest','Push','Pull','Legs','Push','Pull','Legs'];
+
+// Map exercise name → exercise folder name in free-exercise-db
+// These are the exact folder names in the GitHub repo
+const IMG_MAP = {
+  // Push
+  'Flat Barbell Bench Press':       'Barbell_Bench_Press_-_Medium_Grip',
+  'Incline Barbell Press':          'Barbell_Incline_Bench_Press_-_Medium_Grip',
+  'Seated Dumbbell Shoulder Press': 'Dumbbell_Seated_Shoulder_Press',
+  'Dumbbell Lateral Raise':         'Side_Lateral_Raise',
+  'Skull Crushers (Curl Bar)':      'Lying_Close-Grip_Bar_Curl_On_High_Pulley',
+  'Tricep Overhead Extension (DB)': 'Dumbbell_One_Arm_Triceps_Extension',
+  'Incline DB Press':               'Dumbbell_Incline_Press',
+  'Close-Grip Bench Press':         'Barbell_Close_Grip_Bench_Press',
+  'Arnold Press (DB)':              'Arnold_Dumbbell_Press',
+  'Upright Row (Barbell)':          'Barbell_Upright_Row',
+  'Tricep Dips (Bench)':            'Bench_Dips',
+  'Front Raise (DB)':               'Dumbbell_Front_Raise',
+  'Flat DB Press':                  'Dumbbell_Bench_Press',
+  'Push Press (Barbell)':           'Push_Press',
+  'Lateral + Front Raise Combo':    'Side_Lateral_Raise',
+  'Curl Bar Skull Crusher + Press': 'EZ-Bar_Skullcrusher',
+  'Bench Dips Weighted':            'Bench_Dips',
+  // Pull
+  'Barbell Bent-Over Row':          'Barbell_Bent_Over_Row',
+  'Underhand Barbell Row':          'Bent_Over_Two-Dumbbell_Row',
+  'Barbell Deadlift':               'Barbell_Deadlift',
+  'Barbell Curl':                   'Barbell_Curl',
+  'Hammer Curl (DB)':               'Hammer_Curls',
+  'Face Pull (improvised)':         'Reverse_Flyes',
+  'Romanian Deadlift':              'Romanian_Deadlift',
+  'Pendlay Row':                    'Barbell_Bent_Over_Row',
+  'Curl Bar Preacher Curl (bench)': 'EZ_Barbell_Preacher_Curls',
+  'Reverse Curl (Curl Bar)':        'Barbell_Reverse_Curl',
+  'DB Reverse Fly':                 'Reverse_Flyes',
+  'Barbell Shrug':                  'Barbell_Shrug',
+  'Sumo Deadlift':                  'Sumo_Deadlift',
+  'T-Bar Row (improvised)':         'T-Bar_Row_with_Handle',
+  'Barbell 21s':                    'Barbell_Curl',
+  'Concentration Curl (DB)':        'Concentration_Curls',
+  'Single Arm DB Row':              'Bent_Over_Two-Dumbbell_Row',
+  'Prone Cobra (Rear Delt)':        'Reverse_Flyes',
+  // Legs
+  'Barbell Back Squat':             'Barbell_Full_Squat',
+  'Barbell Lunges':                 'Barbell_Lunge',
+  'Goblet Squat (DB)':              'Dumbbell_Goblet_Squat',
+  'Calf Raise (Barbell)':           'Standing_Calf_Raises',
+  'Jump Rope Finisher':             'Jump_Rope',
+  'Front Squat (Barbell)':          'Barbell_Front_Squat_with_Crossed_Arms',
+  'Stiff-Leg Deadlift':             'Stiff-Legged_Barbell_Deadlift',
+  'Bulgarian Split Squat (DB)':     'Dumbbell_Bulgarian_Split_Squat',
+  'Barbell Hip Thrust (on bench)':  'Barbell_Hip_Thrust',
+  'Single Leg Calf Raise':          'Standing_Single_Leg_Calf_Raise',
+  'Jump Rope HIIT':                 'Jump_Rope',
+  'Pause Squat':                    'Barbell_Full_Squat',
+  'Barbell Good Morning':           'Good_Morning',
+  'Walking Lunges (Barbell)':       'Barbell_Walking_Lunge',
+  'Sumo Squat (DB)':                'Dumbbell_Goblet_Squat',
+  'Donkey Calf Raise':              'Donkey_Calf_Raises',
+  'Jump Rope + Squat Combo':        'Jump_Rope',
+};
+
+// YouTube search terms for each exercise
+const YT_MAP = {
+  'Flat Barbell Bench Press': 'barbell bench press form tutorial',
+  'Incline Barbell Press': 'incline barbell bench press form',
+  'Barbell Bent-Over Row': 'barbell bent over row form tutorial',
+  'Barbell Deadlift': 'barbell deadlift form tutorial',
+  'Barbell Back Squat': 'barbell back squat form tutorial',
+  'Romanian Deadlift': 'Romanian deadlift form tutorial',
+  'Barbell Curl': 'barbell curl form tutorial',
+  'Skull Crushers (Curl Bar)': 'EZ bar skull crusher form',
+  'Arnold Press (DB)': 'Arnold press form tutorial',
+  'Bulgarian Split Squat (DB)': 'Bulgarian split squat form tutorial',
+  'Barbell Hip Thrust (on bench)': 'barbell hip thrust form tutorial',
+};
+
+// ─── PROGRAMS ──────────────────────────────────────────────────────────────
+const PROGRAMS = {
+  push: { label:'Push Day', phases:[
+    [ // Phase 1
+      {n:'Flat Barbell Bench Press',    sets:4, reps:'8–10',  muscle:'Chest',          tip:'Grip just wider than shoulders. Lower bar to mid-chest, touch lightly, drive up. Keep feet flat, back slightly arched, elbows at ~75°. This is your main chest builder.'},
+      {n:'Incline Barbell Press',       sets:3, reps:'10–12', muscle:'Upper Chest',     tip:'Set bench to 30°. Lower bar to upper chest. Controls the upper pec and front delt. Essential for a full chest.'},
+      {n:'Seated Dumbbell Shoulder Press', sets:3, reps:'10–12', muscle:'Shoulders',   tip:'Sit upright on bench. Load both dumbbell bars equally. Press straight up, don\'t lean back. Elbows slightly forward of shoulder line.'},
+      {n:'Dumbbell Lateral Raise',      sets:3, reps:'12–15', muscle:'Side Delts',      tip:'Slight bend in elbow. Lead with elbows, not hands. Raise to just below shoulder height. Pause at top. Use light plates on dumbbells — keep it strict.'},
+      {n:'Skull Crushers (Curl Bar)',   sets:3, reps:'10–12', muscle:'Triceps',         tip:'Lie on bench. Use your curl bar. Lower the bar toward your FOREHEAD (don\'t go behind head). Elbows stay fixed pointing to ceiling. Squeeze at top.'},
+      {n:'Tricep Overhead Extension (DB)', sets:3, reps:'12–15', muscle:'Triceps',     tip:'Hold one dumbbell bar with both hands overhead. Lower behind head until elbows at 90°. Keeps elbows close to ears. Full stretch hits long head of tricep.'},
+    ],
+    [ // Phase 2
+      {n:'Incline DB Press',            sets:4, reps:'8–10',  muscle:'Upper Chest',     tip:'Bench at 30°. Load both dumbbell bars with 5kg plates. Touch dumbbells at top, lower until stretch at chest. Greater range of motion than barbell.'},
+      {n:'Close-Grip Bench Press',      sets:3, reps:'8–10',  muscle:'Triceps/Chest',   tip:'Same flat bench. Hands shoulder-width (narrower than normal bench). Elbows tucked close to body. Primarily hits triceps with chest secondary.'},
+      {n:'Arnold Press (DB)',           sets:3, reps:'10–12', muscle:'All 3 Delt Heads',tip:'Start with palms facing you at shoulder height. As you press up, rotate palms outward. At top, palms face away. Reverse on descent. Hits front, side, and rear delt.'},
+      {n:'Upright Row (Barbell)',       sets:3, reps:'12',    muscle:'Traps/Side Delts',tip:'Grip slightly narrower than shoulders. Pull bar up close to body to chin height, elbows flare HIGH above bar. Builds trap and side delt thickness.'},
+      {n:'Tricep Dips (Bench)',         sets:3, reps:'To Fail',muscle:'Triceps',        tip:'Hands on bench edge behind you, legs out straight (harder) or bent (easier). Lower until arms 90°. Keep back close to bench. Drive up through palms.'},
+      {n:'Front Raise (DB)',            sets:3, reps:'12–15', muscle:'Front Delts',     tip:'Both arms or alternate. Hold dumbbells at thighs, raise with slight elbow bend to shoulder level. Controlled — don\'t swing. Isolates front shoulder.'},
+    ],
+    [ // Phase 3
+      {n:'Flat DB Press',               sets:4, reps:'8–12',  muscle:'Chest',           tip:'Full range of motion on flat bench. Lower until you feel a strong chest stretch, press up and SQUEEZE at top. Better stretch than barbell = more growth.'},
+      {n:'Incline Barbell Press',       sets:4, reps:'6–8',   muscle:'Upper Chest',     tip:'Go heavier this phase. 30° incline. Controlled descent, explosive press. Add weight each week if form holds.'},
+      {n:'Push Press (Barbell)',        sets:3, reps:'6–8',   muscle:'Shoulders',       tip:'Clean bar to shoulders, slight knee dip, then drive with legs while pressing overhead. Allows heavier weight than strict press. Builds power.'},
+      {n:'Lateral + Front Raise Combo', sets:3, reps:'10+10',muscle:'All Delts',        tip:'Do 10 lateral raises immediately followed by 10 front raises — no rest. That\'s 1 set. Total delt burnout. Keep weight light and form perfect.'},
+      {n:'Curl Bar Skull Crusher + Press', sets:3,reps:'10', muscle:'Triceps',          tip:'Do a skull crusher, then without re-racking, immediately do a close-grip press. Double tricep stimulus in one set. Great strength and size builder.'},
+      {n:'Bench Dips Weighted',         sets:3, reps:'10–12', muscle:'Triceps',         tip:'Place a weight plate on your lap for added resistance. Slow descent (3 sec), quick press. Add weight each phase week.'},
+    ]
+  ]},
+  pull: { label:'Pull Day', phases:[
+    [ // Phase 1
+      {n:'Barbell Bent-Over Row',       sets:4, reps:'8–10',  muscle:'Back (Lats/Rhomboids)', tip:'Hinge at hips ~45°, soft knee bend. Pull bar to belly button. Squeeze shoulder blades together at top. Keep back flat — not rounded. The most important back exercise you can do.'},
+      {n:'Underhand Barbell Row',       sets:3, reps:'10–12', muscle:'Lats + Biceps',   tip:'Same movement but palms face UP (supinated). Targets lower lats more and includes biceps. Think "pull your elbows into your hip pockets".'},
+      {n:'Barbell Deadlift',            sets:3, reps:'6–8',   muscle:'Full Posterior Chain', tip:'Bar over mid-foot, hip-width stance. Hinge down, grip just outside legs. Push floor away — hips and shoulders rise TOGETHER. Lock hips out at top. The king. Go heavy but safe.'},
+      {n:'Barbell Curl',                sets:3, reps:'10–12', muscle:'Biceps',          tip:'Use 5ft bar or curl bar. Elbows pinned to your sides throughout. Full extension at bottom, curl all the way up. Don\'t swing — strict reps build more bicep.'},
+      {n:'Hammer Curl (DB)',            sets:3, reps:'12',    muscle:'Biceps + Brachialis', tip:'Neutral grip (thumbs pointing up, like holding hammers). Hits the brachialis muscle under the bicep — this pushes the bicep UP making it look bigger.'},
+      {n:'Face Pull (improvised)',      sets:3, reps:'15',    muscle:'Rear Delts + Rotator Cuff', tip:'No cables? Bent-over reverse fly: lean forward 90°, DB in each hand, raise arms out to sides with a slight bend at elbow. Think "show your armpits". Essential for shoulder health.'},
+    ],
+    [ // Phase 2
+      {n:'Romanian Deadlift',           sets:4, reps:'8–10',  muscle:'Hamstrings + Lower Back', tip:'Start standing, slight knee bend. Push hips BACK as bar goes down your legs. Feel the hamstring stretch at mid-shin. Keep back flat. The best hamstring exercise in your program.'},
+      {n:'Pendlay Row',                 sets:4, reps:'6–8',   muscle:'Back',            tip:'Bar starts on floor each rep (unlike normal row). Back parallel to ground. Explosively row to chest. Return to floor. Builds raw pulling power. Go heavy.'},
+      {n:'Curl Bar Preacher Curl (bench)', sets:3,reps:'10–12',muscle:'Bicep Peak',     tip:'Kneel behind the bench, arms over the angled pad (use the incline side). Strict curl — no momentum. Best exercise for building the bicep peak. Use curl bar.'},
+      {n:'Reverse Curl (Curl Bar)',     sets:3, reps:'12',    muscle:'Brachialis + Forearms', tip:'Overhand (pronated) grip on curl bar. Full curl. Builds forearm and brachialis thickness that makes arms look bigger from all angles.'},
+      {n:'DB Reverse Fly',             sets:3, reps:'15',    muscle:'Rear Delts',      tip:'Bent over 90°. Dumbbells start hanging down. Raise both arms out to sides, slight elbow bend. Squeeze shoulder blades at top. Light weight, feel the rear delt.'},
+      {n:'Barbell Shrug',               sets:3, reps:'12–15', muscle:'Traps',           tip:'Hold barbell with full grip. Arms straight. Shrug shoulders straight UP — don\'t roll forward or back. Hold 1 second at top. Load it heavy. Builds the trap ridge.'},
+    ],
+    [ // Phase 3
+      {n:'Sumo Deadlift',               sets:4, reps:'5–6',   muscle:'Full Back + Inner Thighs', tip:'Wide stance (feet near plates), toes pointed out. Grip inside legs. Pull heavy. Different hip angle hits glutes and inner thigh differently from conventional. Go for max weight.'},
+      {n:'T-Bar Row (improvised)',      sets:4, reps:'8–10',  muscle:'Mid Back + Lats', tip:'Wedge your barbell into a corner (or against a wall). Straddle the bar and grip near the plates. Row toward your chest. Excellent thickness builder — works where cables usually do.'},
+      {n:'Barbell 21s',                 sets:3, reps:'21',    muscle:'Biceps',          tip:'7 reps lower half (dead hang to 90°) + 7 reps upper half (90° to top) + 7 full reps = 21. Use lighter weight. Creates insane pump and hits all portions of the curl.'},
+      {n:'Concentration Curl (DB)',     sets:3, reps:'12/arm', muscle:'Bicep Peak',     tip:'Sit on bench, elbow resting on inner thigh. Curl with total isolation. Maximizes the peak contraction of the bicep. Best for building the "mountain" look.'},
+      {n:'Single Arm DB Row',           sets:3, reps:'10/side',muscle:'Lats',           tip:'One knee and hand on bench. Pull dumbbell from dead hang toward your hip (not your chest). Full stretch at bottom. Gets a deeper lat contraction than barbell rows.'},
+      {n:'Prone Cobra (Rear Delt)',     sets:3, reps:'15',    muscle:'Rear Delts',      tip:'Face down on bench with a DB in each hand. Pinch shoulder blades, raise arms to sides (like a "W" shape). Slow and controlled. Pairs with all the pressing you do.'},
+    ]
+  ]},
+  legs: { label:'Leg Day', phases:[
+    [ // Phase 1
+      {n:'Barbell Back Squat',          sets:4, reps:'8–10',  muscle:'Quads + Glutes + Core', tip:'Bar on upper traps (not neck). Feet shoulder-width, toes slightly out. Squat to at least parallel — hips below knees. Drive knees out over toes. This is the king of leg exercises.'},
+      {n:'Romanian Deadlift',           sets:3, reps:'10–12', muscle:'Hamstrings',      tip:'Soft knee bend, push hips back, lower bar along your legs. Feel the hamstring stretch at mid-shin. Keep back flat. This is different from a normal deadlift — it\'s a hip hinge.'},
+      {n:'Barbell Lunges',              sets:3, reps:'10/leg', muscle:'Quads + Glutes', tip:'Bar on upper traps. Step forward into a lunge, back knee nearly touches floor. Keep torso upright. Alternate legs. Harder than it looks — balance and strength combined.'},
+      {n:'Goblet Squat (DB)',           sets:3, reps:'12–15', muscle:'Quads + Mobility', tip:'Hold one dumbbell bar vertically at your chest. Squat deep, elbows inside knees at bottom. Great for quad isolation and improving squat mobility. Use as a warm-up move too.'},
+      {n:'Calf Raise (Barbell)',        sets:4, reps:'15–20', muscle:'Calves',          tip:'Bar on traps. Rise onto toes FULLY (full range), lower heel all the way down. Slow 3-second descent. Calves respond to volume — do all 4 sets.'},
+      {n:'Jump Rope Finisher',          sets:3, reps:'60 sec', muscle:'Cardio + Calves', tip:'3 rounds of 60 sec jump rope with 30 sec rest. Do this at the END of leg day. Keeps heart rate up, burns extra calories, and conditions your calves further.'},
+    ],
+    [ // Phase 2
+      {n:'Front Squat (Barbell)',       sets:4, reps:'8',     muscle:'Quads',           tip:'Bar rests on front delts, elbows HIGH (parallel to ground). More upright torso than back squat. MUCH harder but better quad isolation. Start light to learn the rack position.'},
+      {n:'Stiff-Leg Deadlift',          sets:3, reps:'10',    muscle:'Hamstrings',      tip:'Legs nearly straight (slight bend at knee, kept constant). Hinge at hip. Goes deeper than Romanian DL for more hamstring stretch. Keep lower back flat throughout.'},
+      {n:'Bulgarian Split Squat (DB)',  sets:3, reps:'10/leg', muscle:'Quads + Glutes', tip:'Rear foot elevated on bench, front foot forward. Hold dumbbells at sides. Lower until back knee near floor. The most brutal leg exercise. Builds single-leg strength and balance.'},
+      {n:'Barbell Hip Thrust (on bench)', sets:3,reps:'12',  muscle:'Glutes',          tip:'Upper back on bench edge, bar across hips (wrap a towel for comfort). Drive hips up, SQUEEZE glutes hard at top for 1 second. Best glute exercise in existence.'},
+      {n:'Single Leg Calf Raise',       sets:3, reps:'15/leg',muscle:'Calves',          tip:'Hold a dumbbell in one hand, balance on one foot (hold something for support). Full range calf raise. Forces each calf to work independently. Much harder than bilateral.'},
+      {n:'Jump Rope HIIT',              sets:4, reps:'45s on/15s off', muscle:'Cardio', tip:'Alternate: 45s normal skipping, rest 15s. Repeat 4x. Try mixing in high knees or double jumps. Great fat loss tool after leg day.'},
+    ],
+    [ // Phase 3
+      {n:'Pause Squat',                 sets:4, reps:'6',     muscle:'Quads + Glutes', tip:'Regular back squat but PAUSE at the bottom for 3 full seconds. Eliminates stretch reflex. Forces pure muscle strength. Go lighter than normal but it builds more raw power.'},
+      {n:'Barbell Good Morning',        sets:3, reps:'10',    muscle:'Hamstrings + Lower Back', tip:'Bar on traps, feet shoulder-width. Hinge forward to 45° (or lower if flexible). You\'ll feel the hamstrings loaded immediately. Light weight — this is intense. Builds posterior chain thickness.'},
+      {n:'Walking Lunges (Barbell)',    sets:3, reps:'20 steps',muscle:'Quads + Glutes', tip:'Walk forward alternating legs across the room. Bar on traps. Full range every step. Brutal for legs and lungs. Builds athletic performance.'},
+      {n:'Sumo Squat (DB)',             sets:3, reps:'15',    muscle:'Inner Thighs + Glutes', tip:'Wide stance, toes pointed out 45°. Hold a dumbbell bar between legs. Squat deep. Hits inner thighs (adductors) and glutes from a different angle than regular squats.'},
+      {n:'Donkey Calf Raise',           sets:4, reps:'20',    muscle:'Calves',          tip:'Bend over 90° holding the bench. Place a weight plate on your lower back or have someone hold it. Full range calf raise. This bent-hip position puts more stretch on the calf muscle.'},
+      {n:'Jump Rope + Squat Combo',     sets:3, reps:'90 sec', muscle:'Full Body Cardio', tip:'30 sec jump rope → immediately do 15 bodyweight squats → back to rope. Repeat for 90 sec total. Ultimate leg day finisher. Combines strength and conditioning.'},
+    ]
+  ]}
+};
+
+// ─── STATE ─────────────────────────────────────────────────────────────────
+const ST_KEY = 'homelift_v2';
+function getState() { try { return JSON.parse(localStorage.getItem(ST_KEY) || '{}'); } catch { return {}; } }
+function saveState(s) { localStorage.setItem(ST_KEY, JSON.stringify(s)); }
+function getPhase() {
+  const s = getState();
+  if (!s.startDate) { s.startDate = new Date().toISOString().split('T')[0]; saveState(s); }
+  const days = Math.floor((Date.now() - new Date(s.startDate)) / 86400000);
+  return Math.min(Math.floor(days / 90), 2);
+}
+function getPhaseLabel(p) { return ['Phase 1 (Months 1–3)','Phase 2 (Months 4–6)','Phase 3 (Months 7–9)'][p]; }
+function dateKeyForDow(dow) {
+  const d = new Date(); d.setDate(d.getDate() + (dow - d.getDay())); return d.toISOString().split('T')[0];
+}
+function getSessions() { return getState().sessions || {}; }
+function ensureSession(dateKey, type) {
+  const s = getState();
+  if (!s.sessions) s.sessions = {};
+  if (!s.sessions[dateKey]) s.sessions[dateKey] = { type, logs: {}, completed: false };
+  return s;
+}
+
+let selectedDow = new Date().getDay();
+
+// ─── UTILS ─────────────────────────────────────────────────────────────────
+function showPage(id, tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (tab) tab.classList.add('active');
+  const renders = { program: renderProgram, progress: renderProgress, history: renderHistory, equipment: renderEquipment };
+  if (renders[id]) renders[id]();
+}
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--accent);color:#111;padding:9px 18px;border-radius:8px;font-weight:700;font-size:13px;z-index:9999;pointer-events:none';
+  t.textContent = msg; document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .4s'; setTimeout(() => t.remove(), 400); }, 2200);
+}
+
+function getExercises(type, phase) {
+  if (type === 'rest') return [];
+  return PROGRAMS[type].phases[Math.min(phase, 2)];
+}
+
+// ─── EXERCISE IMAGE LOADING ─────────────────────────────────────────────────
+function getImgUrls(exerciseName) {
+  const folder = IMG_MAP[exerciseName];
+  if (!folder) return { thumb: null, imgs: [] };
+  return {
+    thumb: `${IMG_BASE}${folder}/0.jpg`,
+    imgs: [`${IMG_BASE}${folder}/0.jpg`, `${IMG_BASE}${folder}/1.jpg`]
+  };
+}
+
+function loadThumb(exerciseName, imgEl) {
+  const { thumb } = getImgUrls(exerciseName);
+  if (!thumb) return;
+  const img = new Image();
+  img.onload = () => { imgEl.src = thumb; imgEl.classList.add('ex-thumb'); imgEl.classList.remove('ex-thumb-ph','loading'); };
+  img.onerror = () => {}; // keep emoji
+  img.src = thumb;
+}
+
+function loadDemoImgs(exerciseName, container) {
+  const { imgs } = getImgUrls(exerciseName);
+  if (!imgs.length) {
+    container.innerHTML = '<div class="demo-img-ph">No image available</div>';
+    return;
+  }
+  container.innerHTML = imgs.map((url,i) => 
+    `<img class="demo-img" src="${url}" alt="${exerciseName} step ${i+1}" onerror="this.style.display='none'">`
+  ).join('');
+}
+
+// ─── TODAY PAGE ─────────────────────────────────────────────────────────────
+function renderWeekStrip(container) {
+  const sessions = getSessions();
+  const html = `<div class="week-strip">${DAYS.map((d,i) => {
+    const type = SCHEDULE[i];
+    const dateKey = dateKeyForDow(i);
+    const done = sessions[dateKey]?.completed;
+    return `<div class="day-cell ${i===selectedDow?'active':''}" onclick="selectDow(${i})">
+      <div class="dc-name">${d}</div>
+      <div class="dc-type ${type}">${SCHED_LABELS[i]}</div>
+      ${done ? '<div class="dc-check">✓</div>' : ''}
+    </div>`;
+  }).join('')}</div>`;
+  return html;
+}
+
+function selectDow(dow) {
+  selectedDow = dow;
+  renderToday();
+}
+
+function renderToday() {
+  const phase = getPhase();
+  const type = SCHEDULE[selectedDow];
+  const dateKey = dateKeyForDow(selectedDow);
+  const sessions = getSessions();
+  const session = sessions[dateKey] || {};
+
+  let html = `<div class="flex mb" style="justify-content:space-between;align-items:flex-start">
+    <div>
+      <h2>${DAYS[selectedDow]} — ${SCHED_LABELS[selectedDow]}</h2>
+      <span class="phase-badge">${getPhaseLabel(phase)}</span>
+    </div>
+  </div>
+  ${renderWeekStrip()}`;
+
+  if (type === 'rest') {
+    html += `<div class="card" style="text-align:center;padding:40px 20px">
+      <div style="font-size:44px;margin-bottom:10px">😴</div>
+      <div style="font-size:17px;font-weight:600;margin-bottom:6px">Rest & Recover</div>
+      <div style="color:var(--text2);font-size:13px;line-height:1.7">Your muscles grow during rest, not during training.<br>Stay hydrated, eat enough protein, sleep well.<br><br>Optional: 10 min jump rope or a walk.</div>
+    </div>`;
+    document.getElementById('page-today').innerHTML = html;
+    return;
+  }
+
+  const exercises = getExercises(type, phase);
+  const logs = session.logs || {};
+
+  html += `<div class="flex mb"><span class="tag ${type}">${type.toUpperCase()}</span><span style="color:var(--text2);font-size:12px">${exercises.length} exercises</span></div>`;
+
+  exercises.forEach((ex, idx) => {
+    const exKey = `ex_${idx}`;
+    const exLog = logs[exKey] || { sets:[] };
+    while (exLog.sets.length < ex.sets) exLog.sets.push({ weight:'', reps:'', done:false });
+    const emojis = ['🔴','🟠','🟡','🟢','🔵','🟣'];
+    const emoji = emojis[idx % emojis.length];
+
+    html += `<div class="ex-card" id="exc-${idx}">
+      <div class="ex-header" onclick="toggleEx(${idx})">
+        <div class="ex-thumb-ph loading" id="th-${idx}">${emoji}</div>
+        <div class="ex-info">
+          <div class="ex-name">${ex.n}</div>
+          <div class="ex-meta">${ex.sets} sets × ${ex.reps} &nbsp;·&nbsp; ${ex.muscle}</div>
+        </div>
+        <span class="chev" id="chev-${idx}">▾</span>
+      </div>
+      <div class="ex-body" id="exb-${idx}">
+        <div class="demo-section">
+          <div class="demo-imgs" id="demo-imgs-${idx}">
+            <div class="demo-img-ph">Loading images…</div>
+          </div>
+          <div class="demo-label">Start position → End position</div>
+          ${YT_MAP[ex.n] ? `<a class="yt-link" href="https://www.youtube.com/results?search_query=${encodeURIComponent(YT_MAP[ex.n])}" target="_blank">▶ Watch tutorial on YouTube</a>` : ''}
+        </div>
+        <div class="tip-box" style="margin:10px 12px 0">${ex.tip}</div>
+        <div class="sets-section">
+          <div class="set-header"><div></div><div>KG</div><div>REPS</div><div>✓</div></div>
+          ${exLog.sets.map((set,si) => `<div class="set-row">
+            <div class="set-num">${si+1}</div>
+            <input class="set-input" type="number" inputmode="decimal" step="0.5" placeholder="kg" value="${set.weight}"
+              onchange="logSet('${dateKey}','${type}','${exKey}',${si},'weight',this.value)">
+            <input class="set-input" type="number" inputmode="numeric" placeholder="reps" value="${set.reps}"
+              onchange="logSet('${dateKey}','${type}','${exKey}',${si},'reps',this.value)">
+            <button class="tick-btn ${set.done?'done':''}" id="tick-${idx}-${si}"
+              onclick="tickSet('${dateKey}','${type}','${exKey}',${si},${idx})">✓</button>
+          </div>`).join('')}
+          <button class="add-set" onclick="addSet('${dateKey}','${type}','${exKey}',${idx})">+ Add set</button>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  const done = session.completed;
+  html += `<div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap">
+    <button class="btn-primary" onclick="completeSession('${dateKey}','${type}')">${done ? '✓ Session Logged' : 'Mark Session Complete'}</button>
+    <button class="btn-ghost" onclick="clearSession('${dateKey}')">Clear</button>
+  </div>`;
+
+  document.getElementById('page-today').innerHTML = html;
+
+  // Load thumbnails after render
+  exercises.forEach((ex, idx) => {
+    const thEl = document.getElementById(`th-${idx}`);
+    if (thEl) loadThumb(ex.n, thEl);
+  });
+}
+
+function toggleEx(idx) {
+  const body = document.getElementById(`exb-${idx}`);
+  const chev = document.getElementById(`chev-${idx}`);
+  const isOpen = body.classList.toggle('open');
+  chev.classList.toggle('open', isOpen);
+  if (isOpen) {
+    const phase = getPhase();
+    const type = SCHEDULE[selectedDow];
+    const exercises = getExercises(type, phase);
+    const ex = exercises[idx];
+    const demoContainer = document.getElementById(`demo-imgs-${idx}`);
+    if (demoContainer && ex) loadDemoImgs(ex.n, demoContainer);
+  }
+}
+
+function logSet(dateKey, type, exKey, si, field, value) {
+  const s = ensureSession(dateKey, type);
+  if (!s.sessions[dateKey].logs[exKey]) s.sessions[dateKey].logs[exKey] = { sets:[] };
+  while (s.sessions[dateKey].logs[exKey].sets.length <= si)
+    s.sessions[dateKey].logs[exKey].sets.push({ weight:'', reps:'', done:false });
+  s.sessions[dateKey].logs[exKey].sets[si][field] = value;
+  saveState(s);
+}
+
+function tickSet(dateKey, type, exKey, si, exIdx) {
+  const s = ensureSession(dateKey, type);
+  if (!s.sessions[dateKey].logs[exKey]) s.sessions[dateKey].logs[exKey] = { sets:[] };
+  while (s.sessions[dateKey].logs[exKey].sets.length <= si)
+    s.sessions[dateKey].logs[exKey].sets.push({ weight:'', reps:'', done:false });
+  const set = s.sessions[dateKey].logs[exKey].sets[si];
+  set.done = !set.done;
+  saveState(s);
+  const btn = document.getElementById(`tick-${exIdx}-${si}`);
+  if (btn) btn.classList.toggle('done', set.done);
+}
+
+function addSet(dateKey, type, exKey, exIdx) {
+  const s = ensureSession(dateKey, type);
+  if (!s.sessions[dateKey].logs[exKey]) s.sessions[dateKey].logs[exKey] = { sets:[] };
+  s.sessions[dateKey].logs[exKey].sets.push({ weight:'', reps:'', done:false });
+  saveState(s);
+  renderToday();
+  setTimeout(() => toggleEx(exIdx), 50);
+}
+
+function completeSession(dateKey, type) {
+  const s = ensureSession(dateKey, type);
+  s.sessions[dateKey].completed = true;
+  s.sessions[dateKey].completedAt = Date.now();
+  saveState(s);
+  renderToday();
+  toast('Session logged! 💪 Great work!');
+}
+
+function clearSession(dateKey) {
+  const s = getState();
+  if (s.sessions) delete s.sessions[dateKey];
+  saveState(s);
+  renderToday();
+}
+
+// ─── PROGRAM PAGE ────────────────────────────────────────────────────────────
+function renderProgram() {
+  const phase = getPhase();
+  let html = `<h2>Training Program</h2>
+    <div class="tip-info">📅 <strong>Schedule:</strong> Push Mon/Thu · Pull Tue/Fri · Legs Wed/Sat · Rest Sun<br>
+    🔄 <strong>Phase rotation:</strong> Exercises automatically change every 3 months<br>
+    📍 <strong>Currently:</strong> ${getPhaseLabel(phase)}</div>`;
+
+  ['push','pull','legs'].forEach(type => {
+    const prog = PROGRAMS[type];
+    html += `<div class="card mb"><div class="flex mb" style="justify-content:space-between">
+      <h2 style="margin:0">${prog.label}</h2><span class="tag ${type}">${type}</span>
+    </div>
+    <div class="phase-grid">
+      ${[0,1,2].map(p => `<div class="phase-col ${p===phase?'current':''}">
+        <div class="phase-col-title">Phase ${p+1} ${p===phase?'← Now':p<phase?'✓ Done':''}</div>
+        ${prog.phases[p].map(ex => `<div class="phase-ex">• ${ex.n}</div>`).join('')}
+      </div>`).join('')}
+    </div></div>`;
+  });
+
+  document.getElementById('page-program').innerHTML = html;
+}
+
+// ─── PROGRESS PAGE ───────────────────────────────────────────────────────────
+function renderProgress() {
+  const sessions = getSessions();
+  const keys = Object.keys(sessions).sort();
+  const completed = keys.filter(k => sessions[k].completed);
+  const phase = getPhase();
+  const weeklyGoal = 6;
+  const thisWeekDone = completed.filter(k => {
+    const d = new Date(k), now = new Date();
+    const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
+    return d >= weekStart;
+  }).length;
+
+  const byType = t => completed.filter(k => sessions[k].type === t).length;
+  const totalVol = completed.reduce((acc, k) => {
+    Object.values(sessions[k].logs||{}).forEach(ex =>
+      (ex.sets||[]).forEach(s => { acc += (parseFloat(s.weight)||0)*(parseInt(s.reps)||0); }));
+    return acc;
+  }, 0);
+
+  const pageDiv = document.getElementById('page-progress');
+  pageDiv.innerHTML = `<h2>Progress</h2>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-val">${completed.length}</div><div class="stat-lbl">Sessions Done</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--push)">${byType('push')}</div><div class="stat-lbl">Push Days</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--pull)">${byType('pull')}</div><div class="stat-lbl">Pull Days</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--legs)">${byType('legs')}</div><div class="stat-lbl">Leg Days</div></div>
+    </div>
+    <div class="card mb">
+      <h3>This Week (${thisWeekDone}/${weeklyGoal} sessions)</h3>
+      <div class="prog-bar-wrap"><div class="prog-bar" style="width:${Math.min(100,thisWeekDone/weeklyGoal*100)}%"></div></div>
+      <div style="font-size:11px;color:var(--text2);margin-top:5px">Total volume lifted: ${Math.round(totalVol).toLocaleString()} kg×reps</div>
+    </div>
+    <div class="card mb"><h3>Session Volume (last 10)</h3><canvas id="volChart" height="170"></canvas></div>
+    <div class="card">
+      <select id="exSel" onchange="renderStrengthChart()">
+        ${[...new Set(['push','pull','legs'].flatMap(t => PROGRAMS[t].phases.flatMap(ph => ph.map(e => e.n))))].map(n => `<option>${n}</option>`).join('')}
+      </select>
+      <h3 id="strLabel">Strength Trend</h3>
+      <canvas id="strChart" height="150"></canvas>
+    </div>`;
+
+  // Volume chart
+  const last10 = completed.slice(-10);
+  const volData = last10.map(k => {
+    let v=0; Object.values(sessions[k].logs||{}).forEach(ex => (ex.sets||[]).forEach(s => { v+=(parseFloat(s.weight)||0)*(parseInt(s.reps)||0); })); return v;
+  });
+  new Chart(document.getElementById('volChart').getContext('2d'), {
+    type:'bar', data:{ labels:last10.map(k=>k.slice(5)), datasets:[{data:volData, backgroundColor:'rgba(200,255,87,.28)', borderColor:'#c8ff57', borderWidth:1.5, borderRadius:4}]},
+    options:{ responsive:true, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#666',font:{size:11}},grid:{color:'#222'}}, y:{ticks:{color:'#666',font:{size:11}},grid:{color:'#222'}} }}
+  });
+  renderStrengthChart();
+}
+
+function renderStrengthChart() {
+  const exName = document.getElementById('exSel')?.value;
+  if (!exName) return;
+  document.getElementById('strLabel').textContent = exName + ' — Max Weight (kg)';
+  const sessions = getSessions();
+  const points = [];
+  Object.keys(sessions).sort().forEach(k => {
+    const sess = sessions[k];
+    if (!sess.type || sess.type==='rest') return;
+    getExercises(sess.type, getPhase()).forEach((ex,idx) => {
+      if (ex.n !== exName) return;
+      const exLog = (sess.logs||{})[`ex_${idx}`];
+      if (!exLog) return;
+      const maxW = Math.max(0,...(exLog.sets||[]).map(s => parseFloat(s.weight)||0));
+      if (maxW>0) points.push({ x:k.slice(5), y:maxW });
+    });
+  });
+  const old = Chart.getChart('strChart');
+  if (old) old.destroy();
+  new Chart(document.getElementById('strChart').getContext('2d'), {
+    type:'line', data:{ labels:points.map(p=>p.x), datasets:[{data:points.map(p=>p.y), borderColor:'#6bb5ff', backgroundColor:'rgba(107,181,255,.1)', tension:.3, pointRadius:4, pointBackgroundColor:'#6bb5ff'}]},
+    options:{ responsive:true, plugins:{legend:{display:false}}, scales:{ x:{ticks:{color:'#666',font:{size:11}},grid:{color:'#222'}}, y:{ticks:{color:'#666',font:{size:11}},grid:{color:'#222'}} }}
+  });
+}
+
+// ─── HISTORY PAGE ─────────────────────────────────────────────────────────
+function renderHistory() {
+  const sessions = getSessions();
+  const keys = Object.keys(sessions).sort().reverse();
+  const div = document.getElementById('page-history');
+  if (!keys.length) { div.innerHTML = `<h2>History</h2><div class="empty"><div style="font-size:40px;margin-bottom:10px">📭</div>No sessions yet.<br>Complete your first workout!</div>`; return; }
+  div.innerHTML = `<h2>Session History</h2>` + keys.map(k => {
+    const s = sessions[k];
+    const sets = Object.values(s.logs||{}).reduce((a,e)=>a+(e.sets||[]).length,0);
+    const vol = Object.values(s.logs||{}).reduce((a,e)=>{ (e.sets||[]).forEach(st=>{a+=(parseFloat(st.weight)||0)*(parseInt(st.reps)||0);}); return a; },0);
+    return `<div class="hist-row">
+      <div>
+        <div style="font-size:11px;color:var(--text2)">${k}</div>
+        <div style="font-size:14px;font-weight:600;margin:2px 0">${(s.type||'').charAt(0).toUpperCase()+(s.type||'').slice(1)} Day ${s.completed?'✓':''}</div>
+        <div style="font-size:12px;color:var(--text2)">${sets} sets · ${Math.round(vol)} kg×reps</div>
+      </div>
+      <button class="del-btn" onclick="delSession('${k}')">Delete</button>
+    </div>`;
+  }).join('');
+}
+
+function delSession(k) {
+  const s = getState();
+  if (s.sessions) delete s.sessions[k];
+  saveState(s);
+  renderHistory();
+  renderToday();
+}
+
+// ─── EQUIPMENT PAGE ──────────────────────────────────────────────────────────
+function renderEquipment() {
+  const gear = [
+    {icon:'🏋️',name:'5ft Barbell (23mm)', desc:'Your main bar. Used for bench press, squats, deadlifts, rows, overhead press. Estimated weight ~10kg. Can be loaded up to 40kg with all your plates.'},
+    {icon:'💪',name:'3ft EZ Curl Bar', desc:'Used for barbell curls (less wrist strain than straight bar), skull crushers, reverse curls, and close-grip tricep work. Same plate loading system.'},
+    {icon:'🥊',name:'2× Dumbbell Bars', desc:'Load with plates for all dumbbell exercises. 1×5kg per side = ~12kg each dumbbell. 1×2.5kg per side = ~7kg each. Always use collar clips!'},
+    {icon:'🟡',name:'6× 5kg Plates (30kg total)', desc:'Your main loading plates. Use 2 per side on barbell for +10kg each side. Mix with 2.5kg plates for finer increments.'},
+    {icon:'⚪',name:'4× 2.5kg Plates (10kg total)', desc:'For microloading and dumbbell bars. Use on dumbbells (1 per side) or add to barbell for smaller weight jumps.'},
+    {icon:'🪑',name:'Symactive Adjustable Bench', desc:'Use flat (0°) for bench press, 30° incline for incline press, 90° upright for shoulder press, and as a prop for Bulgarian split squats and bench dips. Rated 350kg.'},
+    {icon:'🪢',name:'Jump Rope', desc:'Warm-up (5 min before every session), leg day finisher, and active rest days. Adjust handle so rope just clears your head.'},
+    {icon:'✊',name:'Hand Grip Trainer', desc:'Use between sets or watching TV. 3×20 squeezes each hand daily. Builds grip strength for deadlifts and rows. Often overlooked but very useful.'},
+  ];
+  const configs = [
+    ['Barbell only', '~10kg'], ['+ 2×2.5kg', '~15kg'], ['+ 2×5kg', '~20kg'],
+    ['+ 2×5kg+2×2.5kg', '~25kg'], ['+ 4×5kg', '~30kg'], ['+ 4×5kg+2×2.5kg', '~35kg'],
+    ['+ 6×5kg (all!)', '~40kg (max)'],
+  ];
+  document.getElementById('page-equipment').innerHTML = `<h2>Your Equipment</h2>
+    <div class="tip-info">Every exercise in your program is designed around your exact gear. Here's what you have and how to use each piece.</div>
+    ${gear.map(g=>`<div class="card mb" style="display:flex;gap:12px;align-items:flex-start">
+      <span style="font-size:26px;flex-shrink:0">${g.icon}</span>
+      <div><div style="font-weight:600;font-size:14px;margin-bottom:4px">${g.name}</div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.65">${g.desc}</div></div>
+    </div>`).join('')}
+    <div class="card"><h3>Barbell Loading Configs</h3>
+      ${configs.map(([label,weight])=>`<div style="display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="color:var(--text2)">⚖️ ${label}</span><span style="font-weight:600">${weight}</span>
+      </div>`).join('')}
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">Always use spring collars/clips. Barbell ~10kg estimated.</div>
+    </div>`;
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+renderToday();
+</script>
+</body>
+</html>
